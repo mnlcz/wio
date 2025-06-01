@@ -7,7 +7,6 @@
 #include <wlr/render/allocator.h>
 #include <wlr/render/pass.h>
 #include <wlr/render/wlr_renderer.h>
-#include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/util/box.h>
 #include <wlr/util/transform.h>
@@ -292,7 +291,7 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
 	struct wlr_output *wlr_output = output->wlr_output;
 	struct wlr_output_state *wlr_output_state = output->wlr_output_state;
-	server->render_pass = wlr_output_begin_render_pass(wlr_output, wlr_output_state, NULL, NULL);
+	server->render_pass = wlr_output_begin_render_pass(wlr_output, wlr_output_state, NULL);
 	if (!server->render_pass) {
 		return;
 	}
