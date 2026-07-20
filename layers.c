@@ -78,6 +78,9 @@ static void arrange_layer(struct wlr_output *output,
 			&full_area.width, &full_area.height);
 	wl_list_for_each_reverse(wio_surface, list, link) {
 		struct wlr_layer_surface_v1 *layer = wio_surface->layer_surface;
+		if (!layer->initialized) {
+			continue;
+		}
 		struct wlr_layer_surface_v1_state *state = &layer->current;
 		if (exclusive != (state->exclusive_zone > 0)) {
 			continue;
@@ -147,6 +150,9 @@ static void arrange_layer(struct wlr_output *output,
 				state->margin.top, state->margin.right,
 				state->margin.bottom, state->margin.left);
 		wlr_layer_surface_v1_configure(layer, box.width, box.height);
+		if (layer->initialized) {
+			wlr_layer_surface_v1_configure(layer, box.width, box.height);
+		}
 	}
 }
 
@@ -239,7 +245,8 @@ static void handle_destroy(struct wl_listener *listener, void *data) {
 }
 
 static void handle_map(struct wl_listener *listener, void *data) {
-	struct wlr_layer_surface_v1 *layer_surface = data;
+	struct wio_layer_surface *layer = wl_container_of(listener, layer, map);
+	struct wlr_layer_surface_v1 *layer_surface = layer->layer_surface;
 	wlr_surface_send_enter(layer_surface->surface, layer_surface->output);
 }
 
