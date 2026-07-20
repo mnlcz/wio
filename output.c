@@ -380,6 +380,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
 	wlr_output_add_software_cursors_to_render_pass(wlr_output, server->render_pass, NULL);
 	wlr_render_pass_submit(server->render_pass);
 	wlr_output_commit_state(wlr_output, wlr_output_state);
+	wlr_output_state_finish(wlr_output_state);
+	wlr_output_state_init(wlr_output_state);
 }
 
 static void output_destroy(struct wl_listener *listener, void *data) {
