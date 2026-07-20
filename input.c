@@ -276,6 +276,8 @@ static void
 new_view(struct wio_server *server) {
 	struct wlr_box box = wio_which_box(server);
 	if (box.width < MINWIDTH || box.height < MINHEIGHT) {
+		wlr_log(WLR_ERROR, "new_view: boxtoo small (%dx%d), need >= %dx%d",
+				box.width, box.height, MINWIDTH, MINHEIGHT);
 		return;
  	}
 	struct wio_new_view *view = calloc(1, sizeof(struct wio_new_view));
@@ -299,7 +301,9 @@ new_view(struct wio_server *server) {
 		close(fd[0]);
 		if ((child = fork()) == 0) {
 			close(fd[1]);
+			wlr_log(WLR_ERROR, "new_view: executing: %s", cmd);
 			execl("/bin/sh", "/bin/sh", "-c", cmd, (void *)NULL);
+			wlr_log(WLR_ERROR, "new_view: execl failed");
 			_exit(0);
 		}
 		ssize_t s = 0;
