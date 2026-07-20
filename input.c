@@ -89,6 +89,17 @@ keyboard_handle_key(struct wl_listener *listener, void *data) {
 }
 
 static void
+keyboard_handle_destroy(struct wl_listener *listener, void *data) {
+	struct wio_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
+
+	wl_list_remove(&keyboard->modifiers.link);
+	wl_list_remove(&keyboard->key.link);
+	wl_list_remove(&keyboard->destroy.link);
+	wl_list_remove(&keyboard->link);
+	free(keyboard);
+}
+
+static void
 server_new_keyboard(struct wio_server *server, struct wlr_input_device *device) {
 	struct wlr_keyboard *wlr_keyboard = wlr_keyboard_from_input_device(device);
 
@@ -115,6 +126,8 @@ server_new_keyboard(struct wio_server *server, struct wlr_input_device *device) 
 	wl_signal_add(&wlr_keyboard->events.modifiers, &keyboard->modifiers);
 	keyboard->key.notify = keyboard_handle_key;
 	wl_signal_add(&wlr_keyboard->events.key, &keyboard->key);
+	keyboard->destroy.notify = keyboard_handle_destroy;
+	wl_signal_add(&device->events.destroy, &keyboard->destroy);
 
 	wlr_seat_set_keyboard(server->seat, wlr_keyboard);
 	wl_list_insert(&server->keyboards, &keyboard->link);
