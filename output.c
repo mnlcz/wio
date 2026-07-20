@@ -249,6 +249,9 @@ static void render_view_border(struct wlr_render_pass *render_pass,
 static void render_layer_surface(struct wlr_surface *surface,
 								 int sx, int sy, void *data) {
 	struct wio_layer_surface *layer_surface = data;
+	if (!layer_surface->layer_surface->surface->mapped) {
+		return;
+	}
 	struct wlr_texture *texture = wlr_surface_get_texture(surface);
 	if (texture == NULL)
 		return;
@@ -260,7 +263,9 @@ static void render_layer_surface(struct wlr_surface *surface,
 	ox += layer_surface->geo.x + sx, oy += layer_surface->geo.y + sy;
 	struct wlr_render_texture_options options = {
 		.texture = texture,
-		.dst_box = layer_surface->geo,
+		.dst_box = { .x = ox, .y = oy,
+		             .width = layer_surface->geo.width,
+		             .height = layer_surface->geo.height },
 		.transform = wlr_output_transform_invert(surface->current.transform),
 	};
 	wlr_render_pass_add_texture(layer_surface->server->render_pass, &options);
