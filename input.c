@@ -448,14 +448,16 @@ server_cursor_button(struct wl_listener *listener, void *data) {
 	struct wio_view *view = NULL;
 	if (server->input_state == INPUT_STATE_NONE) {
 		view = wio_view_at(server, server->cursor->x, server->cursor->y, &surface, &sx, &sy);
-	}
-    if (!view) {
-        if (event->state == WL_POINTER_BUTTON_STATE_PRESSED && event->button != BTN_RIGHT) {
-			view_end_interactive(server);
+		if (!view) {
+			if (event->state == WL_POINTER_BUTTON_STATE_PRESSED && event->button != BTN_RIGHT) {
+				return;
+			}
+			handle_button_internal(server, event);
 			return;
 		}
+	} else {
 		handle_button_internal(server, event);
-        return;
+		return;
 	}
 	wio_view_focus(view, surface);
 	switch (view->area) {
