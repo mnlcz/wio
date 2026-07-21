@@ -34,6 +34,11 @@ void scale_box(struct wlr_box *box, float scale) {
 	box->y = round(box->y * scale);
 }
 
+static void send_frame_done_only(struct wlr_surface *surface, int sx, int sy, void *data) {
+	struct timespec *when = data;
+	wlr_surface_send_frame_done(surface, when);
+}
+
 static void render_surface(struct wlr_surface *surface,
 		int sx, int sy, void *data) {
 	struct render_data *rdata = data;
@@ -338,6 +343,13 @@ static void output_frame(struct wl_listener *listener, void *data) {
 				render_surface, &rdata);
 	}
 	view = server->interactive.view;
+
+	struct wio_view *hidden_view;
+	wl_list_for_each(hidden_view, &server->hidden_views, link) {
+		wlr_xdg_surface_for_each_surface(hidden_view->xdg_toplevel->base,
+				send_frame_done_only, &now);
+	}
+
 	switch (server->input_state) {
     case INPUT_STATE_BORDER_DRAG:
 		box = wio_which_box(server);

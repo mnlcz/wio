@@ -152,6 +152,19 @@ void wio_view_focus(struct wio_view *view, struct wlr_surface *surface) {
 	wl_list_insert(&view->server->views, &view->link);
 }
 
+void wio_view_hide(struct wio_view *view) {
+	struct wio_server *server = view->server;
+	struct wlr_seat *seat = server->seat;
+
+	if (seat->keyboard_state.focused_surface == view->xdg_toplevel->base->surface) {
+		wlr_xdg_toplevel_set_activated(view->xdg_toplevel, false);
+		wlr_seat_keyboard_clear_focus(seat);
+	}
+
+	wl_list_remove(&view->link);
+	wl_list_insert(&server->hidden_views, &view->link);
+}
+
 static bool view_at(struct wio_view *view,
 		double lx, double ly, struct wlr_surface **surface,
 		double *sx, double *sy) {

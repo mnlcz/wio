@@ -58,6 +58,7 @@ struct wio_server {
 	struct wl_list pointers;
 	struct wl_list keyboards;
 	struct wl_list views;
+	struct wl_list hidden_views;
 	struct wl_list new_views;
 
 	struct wl_listener new_output;

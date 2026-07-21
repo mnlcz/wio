@@ -227,6 +227,7 @@ int main(int argc, char *argv[]) {
 	wl_list_init(&server.pointers);
 
 	wl_list_init(&server.views);
+	wl_list_init(&server.hidden_views);
 	wl_list_init(&server.new_views);
 	server.xdg_shell = wlr_xdg_shell_create(server.wl_display, XDG_SHELL_VERSION);
 	server.xdg_shell_new_toplevel.notify = server_xdg_shell_new_toplevel;

@@ -247,6 +247,10 @@ menu_handle_button(struct wio_server *server, struct wlr_pointer_button_event *e
 		server->input_state = INPUT_STATE_DELETE_SELECT;
 		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "hand1");
 		break;
+	case 4:
+		server->input_state = INPUT_STATE_HIDE_SELECT;
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "hand1");
+		break;
 	default:
 		server->input_state = INPUT_STATE_NONE;
 		break;
@@ -434,6 +438,16 @@ handle_button_internal(struct wio_server *server, struct wlr_pointer_button_even
 		view = wio_view_at(server, server->cursor->x, server->cursor->y, &surface, &sx, &sy);
 		if (view) {
 			wlr_xdg_toplevel_send_close(view->xdg_toplevel);
+		}
+		view_end_interactive(server);
+		break;
+	case INPUT_STATE_HIDE_SELECT:
+		if (event->state != WL_POINTER_BUTTON_STATE_PRESSED) {
+			break;
+		}
+		view = wio_view_at(server, server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+		if (view) {
+			wio_view_hide(view);
 		}
 		view_end_interactive(server);
 		break;
