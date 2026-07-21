@@ -4,6 +4,7 @@
 #include <cairo/cairo.h>
 #include <drm_fourcc.h>
 #include <getopt.h>
+#include <libguile.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -176,7 +177,7 @@ void parse_args(int argc, char *argv[], struct wio_server *server) {
 	}
 }
 
-int main(int argc, char *argv[]) {
+static void wio_inner_main(void *closure, int argc, char **argv) {
 	struct wio_server server = {0};
 	server.cage = "cage -d";
 	server.term = "alacritty";
@@ -190,7 +191,7 @@ int main(int argc, char *argv[]) {
 	server.backend = wlr_backend_autocreate(wl_display_get_event_loop(server.wl_display),
 	                                        &server.session);
 	if (!server.backend) {
-		return 1;
+		exit(1);
 	}
 	server.renderer = wlr_renderer_autocreate(server.backend);
 	server.allocator = wlr_allocator_autocreate(server.backend, server.renderer);
@@ -269,13 +270,13 @@ int main(int argc, char *argv[]) {
 	const char *socket = wl_display_add_socket_auto(server.wl_display);
 	if (!socket) {
 		wlr_backend_destroy(server.backend);
-		return 1;
+		exit(1);
 	}
 
 	if (!wlr_backend_start(server.backend)) {
 		wlr_backend_destroy(server.backend);
 		wl_display_destroy(server.wl_display);
-		return 1;
+		exit(1);
 	}
 
 	setenv("WAYLAND_DISPLAY", socket, true);
@@ -289,5 +290,9 @@ int main(int argc, char *argv[]) {
 	wlr_renderer_destroy(server.renderer);
 	wlr_backend_destroy(server.backend);
 	wl_display_destroy(server.wl_display);
+}
+
+int main (int argc, char *argv[]) {
+	scm_boot_guile(argc, argv, wio_inner_main, NULL);
 	return 0;
 }
