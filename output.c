@@ -72,7 +72,17 @@ static void render_menu(struct wio_output *output) {
 	struct wio_server *server = output->server;
 	struct wlr_render_pass *render_pass = server->render_pass;
 
-	size_t ntextures = countof(server->menu.inactive_textures);
+	size_t ntextures;
+	struct wlr_texture **inactive_textures, **active_textures;
+	if (server->menu.page == MENU_PAGE_RESTORE) {
+		ntextures = server->menu.restore_texture_count;
+		inactive_textures = server->menu.restore_inactive_textures;
+		active_textures = server->menu.restore_active_textures;
+	} else {
+		ntextures = countof(server->menu.inactive_textures);
+		inactive_textures = server->menu.inactive_textures;
+		active_textures = server->menu.active_textures;
+	}
 	int scale = output->wlr_output->scale;
 	int border = 3 * scale, margin = 4 * scale;
 	int text_height = 0, text_width = 0;
@@ -80,8 +90,8 @@ static void render_menu(struct wio_output *output) {
 		int width, height;
 		// Assumes inactive/active textures are the same size
 		// (they probably are)
-		width = server->menu.inactive_textures[i]->width;
-		height = server->menu.inactive_textures[i]->height;
+		width = inactive_textures[i]->width;
+		height = inactive_textures[i]->height;
 		width /= scale, height /= scale;
 		text_height += height + margin;
 		if (width >= text_width) {
@@ -151,7 +161,7 @@ static void render_menu(struct wio_output *output) {
 	oy += margin;
 	for (size_t i = 0; i < ntextures; ++i) {
 		int width, height;
-		struct wlr_texture *texture = server->menu.inactive_textures[i];
+		struct wlr_texture *texture = inactive_textures[i];
 		width = texture->width;
 		height = texture->height;
 		width /= scale, height /= scale;
@@ -162,7 +172,7 @@ static void render_menu(struct wio_output *output) {
 		box.height = height + margin;
 		if (wlr_box_contains_point(&box, cur_x, cur_y)) {
 			server->menu.selected = i;
-			texture = server->menu.active_textures[i];
+			texture = active_textures[i];
 			scale_box(&box, scale);
 			struct wlr_render_rect_options options = {
 				.box = box,

@@ -230,6 +230,29 @@ server_cursor_motion_absolute( struct wl_listener *listener, void *data) {
 static void
 menu_handle_button(struct wio_server *server, struct wlr_pointer_button_event *event) {
 	server->menu.x = server->menu.y = -1;
+
+	if (server->menu.page == MENU_PAGE_RESTORE) {
+		int idx = server->menu.selected;
+		if (idx >= 0) {
+			int i = 0;
+			struct wio_view *v, *target = NULL;
+			wl_list_for_each(v, &server->hidden_views, link) {
+				if (i == idx) {
+					target = v;
+					break;
+				}
+				i++;
+			}
+			if (target) {
+				wio_view_restore(target);
+			}
+		}
+		free_restore_textures(server);
+		server->menu.page = MENU_PAGE_MAIN;
+		server->input_state = INPUT_STATE_NONE;
+		return;
+	}
+	
 	switch (server->menu.selected) {
 	case 0:
 		server->input_state = INPUT_STATE_NEW_START;
@@ -251,6 +274,49 @@ menu_handle_button(struct wio_server *server, struct wlr_pointer_button_event *e
 		server->input_state = INPUT_STATE_HIDE_SELECT;
 		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "hand1");
 		break;
+	case 5: {
+		free_restore_textures(server);
+
+		if (wl_list_empty(&server->hidden_views)) {
+			server->input_state = INPUT_STATE_NONE;
+			break;
+		}
+
+        cairo_t *cairo = server->menu_text_cairo;
+        cairo_surface_t *surf = server->menu_text_surface;
+        
+		int count = 0;
+		struct wio_view *v;
+		wl_list_for_each(v, &server->hidden_views, link) {
+			count++;
+		}
+
+		server->menu.restore_active_textures = calloc(count, sizeof(struct wlr_texture *));
+		server->menu.restore_inactive_textures = calloc(count, sizeof(struct wlr_texture *));
+		server->menu.restore_texture_count = count;
+
+		int i = 0;
+		cairo_set_source_rgb(cairo, 1, 1, 1);
+		wl_list_for_each(v, &server->hidden_views, link) {
+			const char *title = v->xdg_toplevel->title ? v->xdg_toplevel->title : "untitled";
+			server->menu.restore_active_textures[i] = render_menu_text(server->renderer, cairo, surf, title);
+			i++;
+		}
+
+		i = 0;
+		cairo_set_source_rgb(cairo, 0, 0, 0);
+		wl_list_for_each(v, &server->hidden_views, link) {
+			const char *title = v->xdg_toplevel->title ? v->xdg_toplevel->title : "untitled";
+			server->menu.restore_inactive_textures[i] = render_menu_text(server->renderer, cairo, surf, title);
+			i++;
+		}
+
+		server->menu.page = MENU_PAGE_RESTORE;
+		server->menu.x = server->cursor->x;
+		server->menu.y = server->cursor->y;
+		server->input_state = INPUT_STATE_MENU;
+		break;
+	}
 	default:
 		server->input_state = INPUT_STATE_NONE;
 		break;
@@ -364,6 +430,8 @@ handle_button_internal(struct wio_server *server, struct wlr_pointer_button_even
 		if (event->state == WL_POINTER_BUTTON_STATE_PRESSED) {
 			server->input_state = INPUT_STATE_NONE;
 			server->menu.x = server->menu.y = -1;
+			server->menu.page = MENU_PAGE_MAIN;
+			free_restore_textures(server);
 		}
 		break;
 	case INPUT_STATE_NEW_START:

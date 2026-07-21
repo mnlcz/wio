@@ -165,6 +165,15 @@ void wio_view_hide(struct wio_view *view) {
 	wl_list_insert(&server->hidden_views, &view->link);
 }
 
+void wio_view_restore(struct wio_view *view) {
+	struct wio_server *server = view->server;
+
+	wl_list_remove(&view->link);
+	wl_list_insert(&server->views, &view->link);
+
+	wio_view_focus(view, view->xdg_toplevel->base->surface);
+}
+
 static bool view_at(struct wio_view *view,
 		double lx, double ly, struct wlr_surface **surface,
 		double *sx, double *sy) {

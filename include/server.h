@@ -1,5 +1,6 @@
 #ifndef _WIO_SERVER_H
 #define _WIO_SERVER_H
+#include <cairo/cairo.h>
 #include <signal.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
@@ -32,6 +33,11 @@ enum wio_input_state {
 	INPUT_STATE_BORDER_DRAG,
 	INPUT_STATE_DELETE_SELECT,
 	INPUT_STATE_HIDE_SELECT,
+};
+
+enum wio_menu_page {
+	MENU_PAGE_MAIN = 0,
+	MENU_PAGE_RESTORE,
 };
 
 struct wio_server {
@@ -73,12 +79,19 @@ struct wio_server {
 	struct wl_listener new_layer_surface;
 	struct wl_listener new_toplevel_decoration;
 
+	cairo_surface_t *menu_text_surface;
+	cairo_t *menu_text_cairo;
+
 	struct {
 		int x, y;
 		int width, height;
-		struct wlr_texture *active_textures[5];
-		struct wlr_texture *inactive_textures[5];
+		struct wlr_texture *active_textures[6];
+		struct wlr_texture *inactive_textures[6];
+		struct wlr_texture **restore_active_textures;
+		struct wlr_texture **restore_inactive_textures;
+		int restore_texture_count;
 		int selected;
+		enum wio_menu_page page;
 	} menu;
 
 	struct {
@@ -135,5 +148,9 @@ void server_cursor_button(struct wl_listener *listener, void *data);
 void server_cursor_axis(struct wl_listener *listener, void *data);
 void server_cursor_frame(struct wl_listener *listener, void *data);
 void seat_request_cursor(struct wl_listener *listener, void *data);
+struct wlr_texture *render_menu_text(struct wlr_renderer *renderer,
+                                            cairo_t *cairo, cairo_surface_t *surf,
+                                            const char *text);
+void free_restore_textures(struct wio_server *server);
 
 #endif

@@ -45,6 +45,7 @@ struct wio_view *wio_view_at(struct wio_server *server, double lx, double ly,
 		struct wlr_surface **surface, double *sx, double *sy);
 void wio_view_move(struct wio_view *view, int x, int y);
 void wio_view_hide(struct wio_view *view);
+void wio_view_restore(struct wio_view *view);
 struct wlr_box wio_which_box(struct wio_server *server);
 struct wlr_box wio_canon_box(struct wio_server *server, struct wlr_box box);
 

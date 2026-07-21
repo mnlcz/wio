@@ -34,52 +34,74 @@
 
 #define XDG_SHELL_VERSION 2
 #define LAYER_SHELL_V1_VERSION 4
+#define MENU_TEXT_MAX_WIDTH 120
+
+struct wlr_texture *render_menu_text(struct wlr_renderer *renderer,
+		cairo_t *cairo, cairo_surface_t *surf, const char *text) {
+	char buf[256];
+	snprintf(buf, sizeof(buf), "%s", text);
+
+	cairo_text_extents_t extents;
+	cairo_text_extents(cairo, buf, &extents);
+
+	if (extents.width > MENU_TEXT_MAX_WIDTH) {
+		size_t len = strlen(buf);
+		while (len > 0) {
+			len--;
+			snprintf(buf, sizeof(buf), "%.*s...", (int)len, text);
+			cairo_text_extents(cairo, buf, &extents);
+			if (extents.width <= MENU_TEXT_MAX_WIDTH) {
+				break;
+			}
+		}
+	}
+
+	cairo_set_operator(cairo, CAIRO_OPERATOR_CLEAR);
+	cairo_paint(cairo);
+	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
+	cairo_text_extents(cairo, buf, &extents);
+	cairo_move_to(cairo, 0, extents.height);
+	cairo_show_text(cairo, buf);
+	cairo_surface_flush(surf);
+	unsigned char *data = cairo_image_surface_get_data(surf);
+	return wlr_texture_from_pixels(renderer,
+			DRM_FORMAT_ARGB8888,
+			cairo_image_surface_get_stride(surf),
+			extents.width + 2, extents.height + 2, data);
+}
+
+void free_restore_textures(struct wio_server *server) {
+	for (int i = 0; i < server->menu.restore_texture_count; ++i) {
+		wlr_texture_destroy(server->menu.restore_active_textures[i]);
+		wlr_texture_destroy(server->menu.restore_inactive_textures[i]);
+	}
+	free(server->menu.restore_active_textures);
+	free(server->menu.restore_inactive_textures);
+	server->menu.restore_active_textures = NULL;
+	server->menu.restore_inactive_textures = NULL;
+	server->menu.restore_texture_count = 0;
+}
 
 static void gen_menu_textures(struct wio_server *server) {
 	struct wlr_renderer *renderer = server->renderer;
 	// numbers pulled from ass
-	cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 128, 128);
-	cairo_t *cairo = cairo_create(surf);
+    server->menu_text_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 128, 128);
+    server->menu_text_cairo = cairo_create(server->menu_text_surface);
+	cairo_surface_t *surf = server->menu_text_surface;
+	cairo_t *cairo = server->menu_text_cairo;
 	cairo_select_font_face(cairo, "monospace", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 	cairo_set_font_size(cairo, 14);
 	cairo_set_source_rgb(cairo, 0, 0, 0);
 
-	char *text[] = {"New", "Resize", "Move", "Delete", "Hide"};
+	char *text[] = {"New", "Resize", "Move", "Delete", "Hide", "Restore"};
 	for (size_t i = 0; i < countof(text); ++i) {
-		cairo_set_operator(cairo, CAIRO_OPERATOR_CLEAR);
-		cairo_paint(cairo);
-		cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
-		cairo_text_extents_t extents;
-		cairo_text_extents(cairo, text[i], &extents);
-		cairo_move_to(cairo, 0, extents.height);
-		cairo_show_text(cairo, text[i]);
-		cairo_surface_flush(surf);
-		unsigned char *data = cairo_image_surface_get_data(surf);
-		server->menu.inactive_textures[i] = wlr_texture_from_pixels(renderer,
-				DRM_FORMAT_ARGB8888,
-				cairo_image_surface_get_stride(surf),
-				extents.width + 2, extents.height + 2, data);
+		server->menu.inactive_textures[i] = render_menu_text(renderer, cairo, surf, text[i]);
 	}
 
 	cairo_set_source_rgb(cairo, 1, 1, 1);
 	for (size_t i = 0; i < countof(text); ++i) {
-		cairo_set_operator(cairo, CAIRO_OPERATOR_CLEAR);
-		cairo_paint(cairo);
-		cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
-		cairo_text_extents_t extents;
-		cairo_text_extents(cairo, text[i], &extents);
-		cairo_move_to(cairo, 0, extents.height);
-		cairo_show_text(cairo, text[i]);
-		cairo_surface_flush(surf);
-		unsigned char *data = cairo_image_surface_get_data(surf);
-		server->menu.active_textures[i] = wlr_texture_from_pixels(renderer,
-				DRM_FORMAT_ARGB8888,
-				cairo_image_surface_get_stride(surf),
-				extents.width + 2, extents.height + 2, data);
+		server->menu.active_textures[i] = render_menu_text(renderer, cairo, surf, text[i]);
 	}
-
-	cairo_destroy(cairo);
-	cairo_surface_destroy(surf);
 }
 
 static enum wl_output_transform str_to_transform(const char *str) {
@@ -159,7 +181,7 @@ int main(int argc, char *argv[]) {
 	server.cage = "cage -d";
 	server.term = "alacritty";
 
-	wlr_log_init(WLR_DEBUG, NULL);
+	wlr_log_init(WLR_ERROR, NULL);
 	wl_list_init(&server.output_configs);
 
 	parse_args(argc, argv, &server);
