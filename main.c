@@ -182,6 +182,9 @@ static void wio_inner_main(void *closure, int argc, char **argv) {
 	server.cage = "cage -d";
 	server.term = "alacritty";
 
+	// load guile file, hardcoded path first for debugging
+	scm_c_primitive_load("/home/mnlcz/.config/wio/init.scm");
+
 	wlr_log_init(WLR_ERROR, NULL);
 	wl_list_init(&server.output_configs);
 
