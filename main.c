@@ -5,11 +5,9 @@
 #include <drm_fourcc.h>
 #include <getopt.h>
 #include <libguile.h>
-#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
 #include <wlr/render/allocator.h>
@@ -31,6 +29,7 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/log.h>
 
+#include "guile.h"
 #include "layers.h"
 #include "server.h"
 #include "view.h"
@@ -184,22 +183,7 @@ static void wio_inner_main(void *closure, int argc, char **argv) {
 	server.cage = "cage -d";
 	server.term = "alacritty";
 
-    const char *home = getenv("HOME");
-    if (home != NULL) {
-        char init_path[PATH_MAX];
-        int n = snprintf(init_path, sizeof(init_path), "%s/.config/wio/init.scm", home);
-        if (n > 0 && (size_t)n < sizeof(init_path)) {
-            if (access(init_path, R_OK) == 0) {
-                scm_c_primitive_load(init_path);
-            } else {
-                fprintf(stderr, "wio: no init.scm found at %s, running without Scheme\n", init_path);
-            }
-        } else {
-            fprintf(stderr, "wio: HOME path too long, skipping Scheme init\n");
-        }
-    } else {
-        fprintf(stderr, "wio: HOME not set, skipping Scheme init\n");
-    }
+    wio_guile_init();
 
 	wlr_log_init(WLR_ERROR, NULL);
 	wl_list_init(&server.output_configs);

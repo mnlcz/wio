@@ -48,6 +48,7 @@ wio_inc = include_directories('include')
 subdir('protocols')
 
 wio_sources = files(
+	'guile.c',
 	'main.c',
 	'layers.c',
 	'input.c',
