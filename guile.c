@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <libguile.h>
 #include <limits.h>
 #include <stdio.h>
