@@ -15,10 +15,26 @@ wio_ping (void)
   return SCM_UNSPECIFIED;
 }
 
+static SCM
+wio_echo (SCM msg)
+{
+  if (!scm_is_string (msg))
+    {
+      scm_wrong_type_arg_msg ("wio-echo", 1, msg, "string");
+    }
+
+  char *str = scm_to_locale_string (msg);
+  fprintf (stderr, "wio: wio-echo received: %s\n", str);
+  free (str);
+
+  return msg;
+}
+
 static void
 wio_guile_register_primitives (void)
 {
   scm_c_define_gsubr ("wio-ping", 0, 0, 0, wio_ping);
+  scm_c_define_gsubr ("wio-echo", 1, 0, 0, wio_echo);
 }
 
 void
