@@ -23,34 +23,42 @@ struct render_data {
 	struct timespec *when;
 };
 
-static int scale_length(int length, int offset, float scale) {
+static int
+scale_length(int length, int offset, float scale)
+{
 	return round((offset + length) * scale) - round(offset * scale);
 }
 
-void scale_box(struct wlr_box *box, float scale) {
+void
+scale_box(struct wlr_box *box, float scale)
+{
 	box->width = scale_length(box->width, box->x, scale);
 	box->height = scale_length(box->height, box->y, scale);
 	box->x = round(box->x * scale);
 	box->y = round(box->y * scale);
 }
 
-static void send_frame_done_only(struct wlr_surface *surface, int sx, int sy, void *data) {
+static void
+send_frame_done_only(struct wlr_surface *surface, int sx, int sy,
+		     void *data)
+{
 	struct timespec *when = data;
 	wlr_surface_send_frame_done(surface, when);
 }
 
-static void render_surface(struct wlr_surface *surface,
-		int sx, int sy, void *data) {
+static void
+render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
+{
 	struct render_data *rdata = data;
 	struct wio_view *view = rdata->view;
 	struct wlr_output *output = rdata->output;
 	struct wlr_texture *texture = wlr_surface_get_texture(surface);
-	if (texture == NULL) {
+	if(texture == NULL){
 		return;
 	}
 	double ox = 0, oy = 0;
-	wlr_output_layout_output_coords(
-			view->server->output_layout, output, &ox, &oy);
+	wlr_output_layout_output_coords(view->server->output_layout,
+					output, &ox, &oy);
 	ox += view->x + sx, oy += view->y + sy;
 	struct wlr_box box = {
 		.x = ox,
@@ -62,23 +70,27 @@ static void render_surface(struct wlr_surface *surface,
 	struct wlr_render_texture_options options = {
 		.texture = texture,
 		.dst_box = box,
-		.transform = wlr_output_transform_invert(surface->current.transform),
+		.transform =
+		    wlr_output_transform_invert(surface->current.
+						transform),
 	};
 	wlr_render_pass_add_texture(rdata->render_pass, &options);
 	wlr_surface_send_frame_done(surface, rdata->when);
 }
 
-static void render_menu(struct wio_output *output) {
+static void
+render_menu(struct wio_output *output)
+{
 	struct wio_server *server = output->server;
 	struct wlr_render_pass *render_pass = server->render_pass;
 
 	size_t ntextures;
 	struct wlr_texture **inactive_textures, **active_textures;
-	if (server->menu.page == MENU_PAGE_RESTORE) {
+	if(server->menu.page == MENU_PAGE_RESTORE){
 		ntextures = server->menu.restore_texture_count;
 		inactive_textures = server->menu.restore_inactive_textures;
 		active_textures = server->menu.restore_active_textures;
-	} else {
+	} else{
 		ntextures = countof(server->menu.inactive_textures);
 		inactive_textures = server->menu.inactive_textures;
 		active_textures = server->menu.active_textures;
@@ -86,7 +98,7 @@ static void render_menu(struct wio_output *output) {
 	int scale = output->wlr_output->scale;
 	int border = 3 * scale, margin = 4 * scale;
 	int text_height = 0, text_width = 0;
-	for (size_t i = 0; i < ntextures; ++i) {
+	for(size_t i = 0; i < ntextures; ++i){
 		int width, height;
 		// Assumes inactive/active textures are the same size
 		// (they probably are)
@@ -94,7 +106,7 @@ static void render_menu(struct wio_output *output) {
 		height = inactive_textures[i]->height;
 		width /= scale, height /= scale;
 		text_height += height + margin;
-		if (width >= text_width) {
+		if(width >= text_width){
 			text_width = width;
 		}
 	}
@@ -102,8 +114,8 @@ static void render_menu(struct wio_output *output) {
 	text_height += border * 2 - margin;
 
 	double ox = server->menu.x, oy = server->menu.y;
-	wlr_output_layout_output_coords(
-			server->output_layout, output->wlr_output, &ox, &oy);
+	wlr_output_layout_output_coords(server->output_layout,
+					output->wlr_output, &ox, &oy);
 
 	struct wlr_box bg_box = { 0 };
 	struct wlr_render_rect_options options = { 0 };
@@ -155,33 +167,34 @@ static void render_menu(struct wio_output *output) {
 
 	double cur_x = server->cursor->x, cur_y = server->cursor->y;
 	wlr_output_layout_output_coords(server->output_layout,
-			output->wlr_output, &cur_x, &cur_y);
+					output->wlr_output, &cur_x,
+					&cur_y);
 	server->menu.selected = -1;
 	ox += margin;
 	oy += margin;
-	for (size_t i = 0; i < ntextures; ++i) {
+	for(size_t i = 0; i < ntextures; ++i){
 		int width, height;
 		struct wlr_texture *texture = inactive_textures[i];
 		width = texture->width;
 		height = texture->height;
 		width /= scale, height /= scale;
 		struct wlr_box box = { 0 };
-		box.x = ox - scale /* fudge */;
-		box.y = oy - scale /* fudge */;
+		box.x = ox - scale /* fudge */ ;
+		box.y = oy - scale /* fudge */ ;
 		box.width = text_width - border;
 		box.height = height + margin;
-		if (wlr_box_contains_point(&box, cur_x, cur_y)) {
+		if(wlr_box_contains_point(&box, cur_x, cur_y)){
 			server->menu.selected = i;
 			texture = active_textures[i];
 			scale_box(&box, scale);
 			struct wlr_render_rect_options options = {
 				.box = box,
-			    .color = menu_selected
+				.color = menu_selected
 			};
 			wlr_render_pass_add_rect(render_pass, &options);
-		} else {
+		} else{
 			width = texture->width;
-            height = texture->height;
+			height = texture->height;
 			width /= scale, height /= scale;
 		}
 		box.x = (ox + (text_width / 2 - width / 2));
@@ -202,13 +215,15 @@ static void render_menu(struct wio_output *output) {
 	server->menu.height = text_height;
 }
 
-static void render_view_border(struct wlr_render_pass *render_pass,
-							   struct wio_output *output, struct wio_view *view,
-							   struct wlr_box box, int selection) {
+static void
+render_view_border(struct wlr_render_pass *render_pass,
+		   struct wio_output *output, struct wio_view *view,
+		   struct wlr_box box, int selection)
+{
 	struct wlr_render_color color;
-	if (selection)
+	if(selection)
 		color = selection_box;
-	else if (!view || view->xdg_toplevel->current.activated)
+	else if(!view || view->xdg_toplevel->current.activated)
 		color = active_border;
 	else
 		color = inactive_border;
@@ -216,14 +231,15 @@ static void render_view_border(struct wlr_render_pass *render_pass,
 	struct wlr_output *wlr_output = output->wlr_output;
 	int scale = wlr_output->scale;
 	double ox = 0, oy = 0;
-	wlr_output_layout_output_coords(output->server->output_layout, wlr_output, &ox, &oy);
+	wlr_output_layout_output_coords(output->server->output_layout,
+					wlr_output, &ox, &oy);
 	struct wlr_box borders = { 0 };
 	struct wlr_render_rect_options options = { 0 };
 
 	// Top
 	borders.x = ox + (box.x - window_border);
 	borders.y = oy + (box.y - window_border);
-	borders.width = (box.width + window_border * 2) ;
+	borders.width = (box.width + window_border * 2);
 	borders.height = window_border;
 	scale_box(&borders, scale);
 	options.box = borders;
@@ -261,61 +277,74 @@ static void render_view_border(struct wlr_render_pass *render_pass,
 	wlr_render_pass_add_rect(render_pass, &options);
 }
 
-static void render_layer_surface(struct wlr_surface *surface,
-								 int sx, int sy, void *data) {
+static void
+render_layer_surface(struct wlr_surface *surface,
+		     int sx, int sy, void *data)
+{
 	struct wio_layer_surface *layer_surface = data;
-	if (!layer_surface->layer_surface->surface->mapped) {
+	if(!layer_surface->layer_surface->surface->mapped){
 		return;
 	}
 	struct wlr_texture *texture = wlr_surface_get_texture(surface);
-	if (texture == NULL)
+	if(texture == NULL)
 		return;
 
 	struct wlr_output *output = layer_surface->layer_surface->output;
 	double ox = 0, oy = 0;
-	wlr_output_layout_output_coords(
-			layer_surface->server->output_layout, output, &ox, &oy);
+	wlr_output_layout_output_coords(layer_surface->server->
+					output_layout, output, &ox, &oy);
 	ox += layer_surface->geo.x + sx, oy += layer_surface->geo.y + sy;
 	struct wlr_render_texture_options options = {
 		.texture = texture,
-		.dst_box = { .x = ox, .y = oy,
-		             .width = layer_surface->geo.width,
-		             .height = layer_surface->geo.height },
-		.transform = wlr_output_transform_invert(surface->current.transform),
+		.dst_box = {.x = ox,.y = oy,
+			    .width = layer_surface->geo.width,
+			    .height = layer_surface->geo.height },
+		.transform =
+		    wlr_output_transform_invert(surface->current.
+						transform),
 	};
-	wlr_render_pass_add_texture(layer_surface->server->render_pass, &options);
+	wlr_render_pass_add_texture(layer_surface->server->render_pass,
+				    &options);
 	// Hack because I'm too lazy to fish through a new rdata struct
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	wlr_surface_send_frame_done(surface, &now);
 }
 
-static void render_layer(
-		struct wio_output *output, struct wl_list *layer_surfaces) {
+static void
+render_layer(struct wio_output *output, struct wl_list *layer_surfaces)
+{
 	struct wio_layer_surface *layer_surface;
-	wl_list_for_each(layer_surface, layer_surfaces, link) {
+	wl_list_for_each(layer_surface, layer_surfaces, link){
 		struct wlr_layer_surface_v1 *wlr_layer_surface_v1 =
-			layer_surface->layer_surface;
+		    layer_surface->layer_surface;
 		wlr_surface_for_each_surface(wlr_layer_surface_v1->surface,
-			render_layer_surface, layer_surface);
+					     render_layer_surface,
+					     layer_surface);
 	}
 }
 
-static void output_frame(struct wl_listener *listener, void *data) {
-	struct wio_output *output = wl_container_of(listener, output, frame);
+static void
+output_frame(struct wl_listener *listener, void *data)
+{
+	struct wio_output *output =
+	    wl_container_of(listener, output, frame);
 	struct wio_server *server = output->server;
-    struct wlr_box box = { 0 };
+	struct wlr_box box = { 0 };
 
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	struct wlr_output *wlr_output = output->wlr_output;
-	struct wlr_output_state *wlr_output_state = output->wlr_output_state;
-	server->render_pass = wlr_output_begin_render_pass(wlr_output, wlr_output_state, NULL);
-	if (!server->render_pass) {
+	struct wlr_output_state *wlr_output_state =
+	    output->wlr_output_state;
+	server->render_pass =
+	    wlr_output_begin_render_pass(wlr_output, wlr_output_state,
+					 NULL);
+	if(!server->render_pass){
 		return;
 	}
-	
+
 	struct wlr_box frame_box = {
 		.x = 0,
 		.y = 0,
@@ -328,12 +357,15 @@ static void output_frame(struct wl_listener *listener, void *data) {
 	};
 	wlr_render_pass_add_rect(server->render_pass, &clear_options);
 
-	render_layer(output, &output->layers[ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND]);
-	render_layer(output, &output->layers[ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM]);
+	render_layer(output,
+		     &output->
+		     layers[ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND]);
+	render_layer(output,
+		     &output->layers[ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM]);
 
 	struct wio_view *view;
-	wl_list_for_each_reverse(view, &server->views, link) {
-		if (!view->xdg_toplevel->base->surface->mapped) {
+	wl_list_for_each_reverse(view, &server->views, link){
+		if(!view->xdg_toplevel->base->surface->mapped){
 			continue;
 		}
 		struct wlr_box box = {
@@ -342,7 +374,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
 			.width = view->xdg_toplevel->current.width,
 			.height = view->xdg_toplevel->current.height,
 		};
-		render_view_border(server->render_pass, output, view, box, 0);
+		render_view_border(server->render_pass, output, view, box,
+				   0);
 		struct render_data rdata = {
 			.output = wlr_output,
 			.view = view,
@@ -350,21 +383,24 @@ static void output_frame(struct wl_listener *listener, void *data) {
 			.when = &now,
 		};
 		wlr_xdg_surface_for_each_surface(view->xdg_toplevel->base,
-				render_surface, &rdata);
+						 render_surface, &rdata);
 	}
 	view = server->interactive.view;
 
 	struct wio_view *hidden_view;
-	wl_list_for_each(hidden_view, &server->hidden_views, link) {
-		wlr_xdg_surface_for_each_surface(hidden_view->xdg_toplevel->base,
-				send_frame_done_only, &now);
+	wl_list_for_each(hidden_view, &server->hidden_views, link){
+		wlr_xdg_surface_for_each_surface(hidden_view->
+						 xdg_toplevel->base,
+						 send_frame_done_only,
+						 &now);
 	}
 
-	switch (server->input_state) {
-    case INPUT_STATE_BORDER_DRAG:
+	switch (server->input_state){
+	case INPUT_STATE_BORDER_DRAG:
 		box = wio_which_box(server);
 		box = wio_canon_box(server, box);
-		render_view_border(server->render_pass, output, NULL, box, 1);
+		render_view_border(server->render_pass, output, NULL, box,
+				   1);
 		break;
 	case INPUT_STATE_MOVE:
 		struct wlr_box box = {
@@ -373,59 +409,73 @@ static void output_frame(struct wl_listener *listener, void *data) {
 			.width = view->xdg_toplevel->current.width,
 			.height = view->xdg_toplevel->current.height,
 		};
-		render_view_border(server->render_pass, output, view, box, 1);
+		render_view_border(server->render_pass, output, view, box,
+				   1);
 		break;
 	case INPUT_STATE_NEW_END:
 	case INPUT_STATE_RESIZE_END:
 		box = wio_which_box(server);
-		if (box.width > 0 && box.height > 0) {
+		if(box.width > 0 && box.height > 0){
 			struct wlr_render_rect_options options = {
 				.box = box,
 				.color = surface
 			};
-			wlr_render_pass_add_rect(server->render_pass, &options);
+			wlr_render_pass_add_rect(server->render_pass,
+						 &options);
 		}
-		render_view_border(server->render_pass, output, NULL, box, 1);
+		render_view_border(server->render_pass, output, NULL, box,
+				   1);
 		break;
 	default:
 		break;
 	}
 
-	render_layer(output, &output->layers[ZWLR_LAYER_SHELL_V1_LAYER_TOP]);
+	render_layer(output,
+		     &output->layers[ZWLR_LAYER_SHELL_V1_LAYER_TOP]);
 
-	if (server->menu.x != -1 && server->menu.y != -1) {
+	if(server->menu.x != -1 && server->menu.y != -1){
 		render_menu(output);
 	}
 
-	render_layer(output, &output->layers[ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY]);
+	render_layer(output,
+		     &output->layers[ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY]);
 
-	wlr_output_add_software_cursors_to_render_pass(wlr_output, server->render_pass, NULL);
+	wlr_output_add_software_cursors_to_render_pass(wlr_output,
+						       server->render_pass,
+						       NULL);
 	wlr_render_pass_submit(server->render_pass);
 	wlr_output_commit_state(wlr_output, wlr_output_state);
 	wlr_output_state_finish(wlr_output_state);
 	wlr_output_state_init(wlr_output_state);
 }
 
-static void output_destroy(struct wl_listener *listener, void *data) {
+static void
+output_destroy(struct wl_listener *listener, void *data)
+{
 	struct wlr_output *wlr_output = data;
 	struct wio_output *output = wlr_output->data;
 	struct wio_server *server = output->server;
 
 	wl_list_remove(&output->link);
-	if (wl_list_empty(&server->outputs)) {
+	if(wl_list_empty(&server->outputs)){
 		wl_display_terminate(server->wl_display);
 	}
 }
 
-void server_new_output(struct wl_listener *listener, void *data) {
-	struct wio_server *server = wl_container_of(listener, server, new_output);
+void
+server_new_output(struct wl_listener *listener, void *data)
+{
+	struct wio_server *server =
+	    wl_container_of(listener, server, new_output);
 	struct wlr_output *wlr_output = data;
 
-	wlr_output_init_render(wlr_output, server->allocator, server->renderer);
+	wlr_output_init_render(wlr_output, server->allocator,
+			       server->renderer);
 
 	struct wio_output *output = calloc(1, sizeof(struct wio_output));
 	output->wlr_output = wlr_output;
-	output->wlr_output_state = calloc(1, sizeof(struct wlr_output_state));
+	output->wlr_output_state =
+	    calloc(1, sizeof(struct wlr_output_state));
 	// TODO(rubo): also call wlr_output_state_finish(output->wlr_output_state);
 	wlr_output_state_init(output->wlr_output_state);
 	output->server = server;
@@ -443,49 +493,64 @@ void server_new_output(struct wl_listener *listener, void *data) {
 	wl_list_init(&output->layers[3]);
 
 	struct wio_output_config *_config, *config = NULL;
-	wl_list_for_each(_config, &server->output_configs, link) {
-		if (strcmp(_config->name, wlr_output->name) == 0) {
+	wl_list_for_each(_config, &server->output_configs, link){
+		if(strcmp(_config->name, wlr_output->name) == 0){
 			config = _config;
 			break;
 		}
 	}
 
-	if (config) {
-		if (config->x == -1 && config->y == -1)
-			wlr_output_layout_add_auto(server->output_layout, wlr_output);
-		else {
-			wlr_output_layout_add(server->output_layout, wlr_output,
-					config->x, config->y);
+	if(config){
+		if(config->x == -1 && config->y == -1)
+			wlr_output_layout_add_auto(server->output_layout,
+						   wlr_output);
+		else{
+			wlr_output_layout_add(server->output_layout,
+					      wlr_output, config->x,
+					      config->y);
 		}
 		bool modeset = false;
-		if (config->width && config->height
-		&& !wl_list_empty(&wlr_output->modes)) {
+		if(config->width && config->height
+		   && !wl_list_empty(&wlr_output->modes)){
 			struct wlr_output_mode *mode;
-			wl_list_for_each(mode, &wlr_output->modes, link) {
-				if (mode->width == config->width
-						&& mode->height == config->height) {
-					wlr_output_state_set_mode(output->wlr_output_state, mode);
+			wl_list_for_each(mode, &wlr_output->modes, link){
+				if(mode->width == config->width
+				   && mode->height == config->height){
+					wlr_output_state_set_mode(output->
+								  wlr_output_state,
+								  mode);
 					modeset = true;
 				}
 			}
 		}
-		if (!modeset) {
+		if(!modeset){
 			struct wlr_output_mode *mode =
-				wlr_output_preferred_mode(wlr_output);
-			if (mode)
-				wlr_output_state_set_mode(output->wlr_output_state, mode);
+			    wlr_output_preferred_mode(wlr_output);
+			if(mode)
+				wlr_output_state_set_mode(output->
+							  wlr_output_state,
+							  mode);
 		}
-		if (config->scale)
-			wlr_output_state_set_scale(output->wlr_output_state, config->scale);
-		if (config->transform)
-			wlr_output_state_set_transform(output->wlr_output_state, config->transform);
-		wlr_output_state_set_enabled(output->wlr_output_state, true);
-	} else {
-		struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
-		if (mode)
-			wlr_output_state_set_mode(output->wlr_output_state, mode);
-		wlr_output_state_set_enabled(output->wlr_output_state, true);
-		wlr_output_layout_add_auto(server->output_layout, wlr_output);
+		if(config->scale)
+			wlr_output_state_set_scale(output->
+						   wlr_output_state,
+						   config->scale);
+		if(config->transform)
+			wlr_output_state_set_transform(output->
+						       wlr_output_state,
+						       config->transform);
+		wlr_output_state_set_enabled(output->wlr_output_state,
+					     true);
+	} else{
+		struct wlr_output_mode *mode =
+		    wlr_output_preferred_mode(wlr_output);
+		if(mode)
+			wlr_output_state_set_mode(output->wlr_output_state,
+						  mode);
+		wlr_output_state_set_enabled(output->wlr_output_state,
+					     true);
+		wlr_output_layout_add_auto(server->output_layout,
+					   wlr_output);
 	}
 
 	wlr_output_commit_state(wlr_output, output->wlr_output_state);

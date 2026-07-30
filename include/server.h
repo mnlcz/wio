@@ -143,14 +143,16 @@ struct wio_new_view {
 void server_new_output(struct wl_listener *listener, void *data);
 void server_new_input(struct wl_listener *listener, void *data);
 void server_cursor_motion(struct wl_listener *listener, void *data);
-void server_cursor_motion_absolute(struct wl_listener *listener, void *data);
+void server_cursor_motion_absolute(struct wl_listener *listener,
+				   void *data);
 void server_cursor_button(struct wl_listener *listener, void *data);
 void server_cursor_axis(struct wl_listener *listener, void *data);
 void server_cursor_frame(struct wl_listener *listener, void *data);
 void seat_request_cursor(struct wl_listener *listener, void *data);
 struct wlr_texture *render_menu_text(struct wlr_renderer *renderer,
-                                            cairo_t *cairo, cairo_surface_t *surf,
-                                            const char *text);
+				     cairo_t * cairo,
+				     cairo_surface_t * surf,
+				     const char *text);
 void free_restore_textures(struct wio_server *server);
 
 #endif
