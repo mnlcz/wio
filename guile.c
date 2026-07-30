@@ -36,6 +36,14 @@ wio_guile_register_primitives(void)
 	scm_c_define_gsubr("wio-echo", 1, 0, 0, wio_echo);
 }
 
+static SCM
+wio_guile_load_body(void *data)
+{
+	const char *path = data;
+	scm_c_primitive_load(path);
+	return SCM_UNSPECIFIED;
+}
+
 void
 wio_guile_init(void)
 {
@@ -49,9 +57,8 @@ wio_guile_init(void)
 	}
 
 	char init_path[PATH_MAX];
-	int n =
-	    snprintf(init_path, sizeof(init_path),
-		     "%s/.config/wio/init.scm", home);
+	int n = snprintf(init_path, sizeof(init_path),
+			 "%s/.config/wio/init.scm", home);
 	if(n <= 0 || (size_t) n >= sizeof(init_path)){
 		fprintf(stderr,
 			"wio: HOME path too long, skipping Scheme init\n");
@@ -65,5 +72,7 @@ wio_guile_init(void)
 		return;
 	}
 
-	scm_c_primitive_load(init_path);
+	scm_c_catch(SCM_BOOL_T,
+		    wio_guile_load_body, (void *) init_path,
+		    scm_handle_by_message_noexit, "wio", NULL, NULL);
 }
