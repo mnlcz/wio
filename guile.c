@@ -18,15 +18,59 @@ wio_ping(void)
 static SCM
 wio_echo(SCM msg)
 {
-	if(!scm_is_string(msg)){
+	if(!scm_is_string(msg))
 		scm_wrong_type_arg_msg("wio-echo", 1, msg, "string");
-	}
 
 	char *str = scm_to_locale_string(msg);
 	fprintf(stderr, "wio: wio-echo received: %s\n", str);
 	free(str);
 
 	return msg;
+}
+
+static SCM
+wio_guile_repl_body(void *data)
+{
+	const char *repl_path = (const char *) data;
+
+	scm_c_define("%wio-repl-path", scm_from_locale_string(repl_path));
+	scm_c_eval_string("(use-modules (system repl server))"
+			  "(spawn-server (make-unix-domain-server-socket #:path %wio-repl-path))");
+
+	return SCM_BOOL_T;
+}
+
+static void
+wio_guile_start_repl(void)
+{
+	const char *namespace = getenv("NAMESPACE");
+	if(namespace == NULL){
+		fprintf(stderr,
+			"wio: NAMESPACE not set, REPL server not started\n");
+		return;
+	}
+
+	char repl_path[PATH_MAX];
+	int n =
+	    snprintf(repl_path, sizeof(repl_path), "%s/wio.repl",
+		     namespace);
+	if(n < 0 || (size_t) n >= sizeof(repl_path)){
+		fprintf(stderr,
+			"wio: REPL socket path too long, REPL server not started\n");
+		return;
+	}
+
+	SCM result = scm_c_catch(SCM_BOOL_T,
+				 wio_guile_repl_body, (void *) repl_path,
+				 scm_handle_by_message_noexit, "wio",
+				 NULL, NULL);
+
+	if(scm_is_eq(result, SCM_BOOL_T)){
+		fprintf(stderr, "wio: REPL server listening at %s\n",
+			repl_path);
+	} else{
+		fprintf(stderr, "wio: REPL server failed to start\n");
+	}
 }
 
 static void
@@ -48,6 +92,7 @@ void
 wio_guile_init(void)
 {
 	wio_guile_register_primitives();
+	wio_guile_start_repl();
 
 	const char *home = getenv("HOME");
 	if(home == NULL){
