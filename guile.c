@@ -1,9 +1,11 @@
 #define _POSIX_C_SOURCE 200809L
 
+#include <errno.h>
 #include <libguile.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "guile.h"
@@ -51,14 +53,18 @@ wio_guile_start_repl(void)
 	}
 
 	char repl_path[PATH_MAX];
-	int n =
-	    snprintf(repl_path, sizeof(repl_path), "%s/wio.repl",
-		     namespace);
+	int n = snprintf(repl_path, sizeof(repl_path), "%s/wio.repl",
+			 namespace);
 	if(n < 0 || (size_t) n >= sizeof(repl_path)){
 		fprintf(stderr,
 			"wio: REPL socket path too long, REPL server not started\n");
 		return;
 	}
+
+	if(unlink(repl_path) != 0 && errno != ENOENT)
+		fprintf(stderr,
+			"wio: could not remove stale REPL socket at %s: %s\n",
+			repl_path, strerror(errno));
 
 	SCM result = scm_c_catch(SCM_BOOL_T,
 				 wio_guile_repl_body, (void *) repl_path,
