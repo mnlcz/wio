@@ -18,6 +18,7 @@
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include "guile.h"
 #include "server.h"
 #include "view.h"
 
@@ -81,8 +82,8 @@ keyboard_handle_modifiers(struct wl_listener *listener, void *data)
 	wlr_seat_set_keyboard(keyboard->server->seat,
 			      keyboard->wlr_keyboard);
 	wlr_seat_keyboard_notify_modifiers(keyboard->server->seat,
-					   &keyboard->wlr_keyboard->
-					   modifiers);
+					   &keyboard->
+					   wlr_keyboard->modifiers);
 }
 
 static void
@@ -272,6 +273,34 @@ server_cursor_motion_absolute(struct wl_listener *listener, void *data)
 }
 
 static void
+apply_menu_action(struct wio_server *server, const char *action)
+{
+	if(action && strcmp(action, "new-start") == 0){
+		server->input_state = INPUT_STATE_NEW_START;
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
+				       "grabbing");
+	} else if(action && strcmp(action, "resize-select") == 0){
+		server->input_state = INPUT_STATE_RESIZE_SELECT;
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
+				       "hand1");
+	} else if(action && strcmp(action, "move-select") == 0){
+		server->input_state = INPUT_STATE_MOVE_SELECT;
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
+				       "hand1");
+	} else if(action && strcmp(action, "delete-select") == 0){
+		server->input_state = INPUT_STATE_DELETE_SELECT;
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
+				       "hand1");
+	} else if(action && strcmp(action, "hide-select") == 0){
+		server->input_state = INPUT_STATE_HIDE_SELECT;
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
+				       "hand1");
+	} else{
+		server->input_state = INPUT_STATE_NONE;
+	}
+}
+
+static void
 menu_handle_button(struct wio_server *server,
 		   struct wlr_pointer_button_event *event)
 {
@@ -300,31 +329,6 @@ menu_handle_button(struct wio_server *server,
 	}
 
 	switch (server->menu.selected){
-	case 0:
-		server->input_state = INPUT_STATE_NEW_START;
-		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
-				       "grabbing");
-		break;
-	case 1:
-		server->input_state = INPUT_STATE_RESIZE_SELECT;
-		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
-				       "hand1");
-		break;
-	case 2:
-		server->input_state = INPUT_STATE_MOVE_SELECT;
-		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
-				       "hand1");
-		break;
-	case 3:
-		server->input_state = INPUT_STATE_DELETE_SELECT;
-		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
-				       "hand1");
-		break;
-	case 4:
-		server->input_state = INPUT_STATE_HIDE_SELECT;
-		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr,
-				       "hand1");
-		break;
 	case 5:{
 			free_restore_textures(server);
 
@@ -352,8 +356,9 @@ menu_handle_button(struct wio_server *server,
 			cairo_set_source_rgb(cairo, 1, 1, 1);
 			wl_list_for_each(v, &server->hidden_views, link){
 				const char *title =
-				    v->xdg_toplevel->title ? v->
-				    xdg_toplevel->title : "untitled";
+				    v->xdg_toplevel->
+				    title ? v->xdg_toplevel->
+				    title : "untitled";
 				server->menu.restore_active_textures[i] =
 				    render_menu_text(server->renderer,
 						     cairo, surf, title);
@@ -364,8 +369,9 @@ menu_handle_button(struct wio_server *server,
 			cairo_set_source_rgb(cairo, 0, 0, 0);
 			wl_list_for_each(v, &server->hidden_views, link){
 				const char *title =
-				    v->xdg_toplevel->title ? v->
-				    xdg_toplevel->title : "untitled";
+				    v->xdg_toplevel->
+				    title ? v->xdg_toplevel->
+				    title : "untitled";
 				server->menu.restore_inactive_textures[i] =
 				    render_menu_text(server->renderer,
 						     cairo, surf, title);
@@ -379,7 +385,10 @@ menu_handle_button(struct wio_server *server,
 			break;
 		}
 	default:
-		server->input_state = INPUT_STATE_NONE;
+		char *action =
+		    wio_scheme_menu_dispatch(server->menu.selected);
+		apply_menu_action(server, action);
+		free(action);
 		break;
 	}
 }
@@ -559,8 +568,8 @@ handle_button_internal(struct wio_server *server,
 		}
 	      Done:
 		wio_view_move(server->interactive.view, box.x, box.y);
-		wlr_xdg_toplevel_set_size(server->interactive.view->
-					  xdg_toplevel, box.width,
+		wlr_xdg_toplevel_set_size(server->interactive.
+					  view->xdg_toplevel, box.width,
 					  box.height);
 
 		view_end_interactive(server);

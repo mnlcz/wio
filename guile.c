@@ -31,6 +31,33 @@ wio_echo(SCM msg)
 }
 
 static SCM
+wio_menu_dispatch_body(void *data)
+{
+	int idx = *(int *) data;
+	SCM proc = scm_variable_ref(scm_c_lookup("wio-menu-dispatch"));
+	SCM result = scm_call_1(proc, scm_from_int(idx));
+
+	if(scm_is_symbol(result))
+		return scm_symbol_to_string(result);
+
+	return SCM_BOOL_F;
+}
+
+char *
+wio_scheme_menu_dispatch(int index)
+{
+	SCM result = scm_c_catch(SCM_BOOL_T,
+				 wio_menu_dispatch_body, (void *) &index,
+				 scm_handle_by_message_noexit, "wio",
+				 NULL, NULL);
+
+	if(!scm_is_string(result))
+		return NULL;
+
+	return scm_to_locale_string(result);
+}
+
+static SCM
 wio_guile_repl_body(void *data)
 {
 	const char *repl_path = (const char *) data;
