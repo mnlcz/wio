@@ -54,6 +54,34 @@ wio_view_title_scm(SCM view_scm)
 }
 
 static SCM
+wio_hide_view_scm(SCM view_scm)
+{
+	scm_assert_foreign_object_type(wio_view_type, view_scm);
+	uint64_t id = (uint64_t) scm_foreign_object_ref(view_scm, 0);
+	struct wio_view *view = wio_view_by_id(the_server, id);
+
+	if(!view)
+		return SCM_BOOL_F;
+	wio_view_hide(view);
+
+	return SCM_BOOL_T;
+}
+
+static SCM
+wio_restore_view_scm(SCM view_scm)
+{
+	scm_assert_foreign_object_type(wio_view_type, view_scm);
+	uint64_t id = (uint64_t) scm_foreign_object_ref(view_scm, 0);
+	struct wio_view *view = wio_view_by_id(the_server, id);
+
+	if(!view)
+		return SCM_BOOL_F;
+	wio_view_restore(view);
+
+	return SCM_BOOL_T;
+}
+
+static SCM
 wio_ping(void)
 {
 	fprintf(stderr, "wio: wio-ping called from Scheme\n");
@@ -156,6 +184,9 @@ wio_guile_register_primitives(void)
 	scm_c_define_gsubr("wio-echo", 1, 0, 0, wio_echo);
 	scm_c_define_gsubr("wio-views", 0, 0, 0, wio_views_list);
 	scm_c_define_gsubr("wio-view-title", 1, 0, 0, wio_view_title_scm);
+	scm_c_define_gsubr("wio-hide-view", 1, 0, 0, wio_hide_view_scm);
+	scm_c_define_gsubr("wio-restore-view", 1, 0, 0,
+			   wio_restore_view_scm);
 }
 
 static SCM
