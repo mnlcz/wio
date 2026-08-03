@@ -9,6 +9,49 @@
 #include <unistd.h>
 
 #include "guile.h"
+#include "server.h"
+#include "view.h"
+
+static struct
+wio_server *the_server;
+
+static SCM wio_view_type;
+
+static SCM
+wio_wrap_view(struct wio_view *view)
+{
+	return scm_make_foreign_object_1(wio_view_type, (void *) view->id);
+}
+
+static SCM
+wio_views_list(void)
+{
+	SCM head = SCM_EOL;
+	struct wio_view *view;
+
+	wl_list_for_each_reverse(view, &the_server->views, link){
+		head = scm_cons(wio_wrap_view(view), head);
+	}
+
+	return head;
+}
+
+static SCM
+wio_view_title_scm(SCM view_scm)
+{
+	scm_assert_foreign_object_type(wio_view_type, view_scm);
+	uint64_t id = (uint64_t) scm_foreign_object_ref(view_scm, 0);
+	struct wio_view *view = wio_view_by_id(the_server, id);
+
+	if(!view)
+		return SCM_BOOL_F;
+
+	const char *title = view->xdg_toplevel->title;
+	if(!title)
+		return SCM_BOOL_F;
+
+	return scm_from_locale_string(title);
+}
 
 static SCM
 wio_ping(void)
@@ -111,6 +154,8 @@ wio_guile_register_primitives(void)
 {
 	scm_c_define_gsubr("wio-ping", 0, 0, 0, wio_ping);
 	scm_c_define_gsubr("wio-echo", 1, 0, 0, wio_echo);
+	scm_c_define_gsubr("wio-views", 0, 0, 0, wio_views_list);
+	scm_c_define_gsubr("wio-view-title", 1, 0, 0, wio_view_title_scm);
 }
 
 static SCM
@@ -122,8 +167,15 @@ wio_guile_load_body(void *data)
 }
 
 void
-wio_guile_init(void)
+wio_guile_init(struct wio_server *server)
 {
+	the_server = server;
+	wio_view_type =
+	    scm_make_foreign_object_type(scm_from_locale_symbol
+					 ("wio-view"),
+					 scm_list_1(scm_from_locale_symbol
+						    ("id")), NULL);
+
 	wio_guile_register_primitives();
 	wio_guile_start_repl();
 

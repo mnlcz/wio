@@ -86,6 +86,8 @@ xdg_toplevel_destroy(struct wl_listener *listener, void *data)
 	free(view);
 }
 
+static uint64_t next_view_id = 1;
+
 void
 server_xdg_shell_new_toplevel(struct wl_listener *listener, void *data)
 {
@@ -97,6 +99,7 @@ server_xdg_shell_new_toplevel(struct wl_listener *listener, void *data)
 	view->server = server;
 	view->xdg_toplevel = xdg_toplevel;
 	view->x = view->y = -1;
+	view->id = next_view_id++;
 
 	view->map.notify = xdg_toplevel_map;
 	wl_signal_add(&xdg_toplevel->base->surface->events.map,
@@ -242,6 +245,22 @@ view_at(struct wio_view *view,
 	return false;
 }
 
+struct wio_view *
+wio_view_by_id(struct wio_server *server, uint64_t id)
+{
+	struct wio_view *view;
+	wl_list_for_each(view, &server->views, link){
+		if(view->id == id)
+			return view;
+	}
+	wl_list_for_each(view, &server->hidden_views, link){
+		if(view->id == id)
+			return view;
+	}
+
+	return NULL;
+}
+
 static int
 portion(int x, int lo, int width)
 {
@@ -324,11 +343,11 @@ wio_which_box(struct wio_server *server)
 		goto End;
 	}
 	x2 = server->interactive.sx +
-	    server->interactive.view->xdg_toplevel->base->surface->current.
-	    width;
+	    server->interactive.view->xdg_toplevel->base->surface->
+	    current.width;
 	y2 = server->interactive.sy +
-	    server->interactive.view->xdg_toplevel->base->surface->current.
-	    height;
+	    server->interactive.view->xdg_toplevel->base->surface->
+	    current.height;
 	switch (server->interactive.view->area){
 	case VIEW_AREA_BORDER_TOP_LEFT:
 		y1 = server->cursor->y;

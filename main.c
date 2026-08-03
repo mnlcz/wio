@@ -80,10 +80,10 @@ void
 free_restore_textures(struct wio_server *server)
 {
 	for(int i = 0; i < server->menu.restore_texture_count; ++i){
-		wlr_texture_destroy(server->menu.
-				    restore_active_textures[i]);
-		wlr_texture_destroy(server->menu.
-				    restore_inactive_textures[i]);
+		wlr_texture_destroy(server->
+				    menu.restore_active_textures[i]);
+		wlr_texture_destroy(server->
+				    menu.restore_inactive_textures[i]);
 	}
 	free(server->menu.restore_active_textures);
 	free(server->menu.restore_inactive_textures);
@@ -208,7 +208,7 @@ wio_inner_main(void *closure, int argc, char **argv)
 	server.cage = "cage -d";
 	server.term = "alacritty";
 
-	wio_guile_init();
+	wio_guile_init(&server);
 
 	wlr_log_init(WLR_ERROR, NULL);
 	wl_list_init(&server.output_configs);
@@ -304,8 +304,8 @@ wio_inner_main(void *closure, int argc, char **argv)
 	    wlr_xdg_decoration_manager_v1_create(server.wl_display);
 	server.new_toplevel_decoration.notify =
 	    server_new_toplevel_decoration;
-	wl_signal_add(&server.xdg_decoration_manager->events.
-		      new_toplevel_decoration,
+	wl_signal_add(&server.xdg_decoration_manager->
+		      events.new_toplevel_decoration,
 		      &server.new_toplevel_decoration);
 
 	server.layer_shell =

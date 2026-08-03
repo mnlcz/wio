@@ -1,5 +1,6 @@
 #ifndef _WIO_VIEW_H
 #define _WIO_VIEW_H
+#include <stdint.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wayland-server.h>
 
@@ -22,6 +23,7 @@ struct wio_server;
 
 struct wio_view {
 	int x, y;
+	uint64_t id;
 	enum wio_view_area area;
 	struct wlr_xdg_toplevel *xdg_toplevel;
 	struct wio_server *server;
@@ -52,5 +54,6 @@ void wio_view_restore(struct wio_view *view);
 struct wlr_box wio_which_box(struct wio_server *server);
 struct wlr_box wio_canon_box(struct wio_server *server,
 			     struct wlr_box box);
+struct wio_view *wio_view_by_id(struct wio_server *server, uint64_t id);
 
 #endif
