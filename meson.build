@@ -45,6 +45,9 @@ xkbcommon = dependency('xkbcommon')
 
 wio_inc = include_directories('include')
 
+guile_version_parts = guile.version().split('.')
+guile_effective_version = guile_version_parts[0] + '.' + guile_version_parts[1]
+
 subdir('protocols')
 
 wio_sources = files(
@@ -71,4 +74,9 @@ executable(
 		xkbcommon,
 	],
 	install: true
+)
+
+install_subdir(
+	'guile' / 'wio',
+	install_dir: 'share' / 'guile' / 'site' / guile_effective_version
 )
