@@ -82,8 +82,8 @@ keyboard_handle_modifiers(struct wl_listener *listener, void *data)
 	wlr_seat_set_keyboard(keyboard->server->seat,
 			      keyboard->wlr_keyboard);
 	wlr_seat_keyboard_notify_modifiers(keyboard->server->seat,
-					   &keyboard->
-					   wlr_keyboard->modifiers);
+					   &keyboard->wlr_keyboard->
+					   modifiers);
 }
 
 static void
@@ -356,9 +356,8 @@ menu_handle_button(struct wio_server *server,
 			cairo_set_source_rgb(cairo, 1, 1, 1);
 			wl_list_for_each(v, &server->hidden_views, link){
 				const char *title =
-				    v->xdg_toplevel->
-				    title ? v->xdg_toplevel->
-				    title : "untitled";
+				    v->xdg_toplevel->title ? v->
+				    xdg_toplevel->title : "untitled";
 				server->menu.restore_active_textures[i] =
 				    render_menu_text(server->renderer,
 						     cairo, surf, title);
@@ -369,9 +368,8 @@ menu_handle_button(struct wio_server *server,
 			cairo_set_source_rgb(cairo, 0, 0, 0);
 			wl_list_for_each(v, &server->hidden_views, link){
 				const char *title =
-				    v->xdg_toplevel->
-				    title ? v->xdg_toplevel->
-				    title : "untitled";
+				    v->xdg_toplevel->title ? v->
+				    xdg_toplevel->title : "untitled";
 				server->menu.restore_inactive_textures[i] =
 				    render_menu_text(server->renderer,
 						     cairo, surf, title);
@@ -568,8 +566,8 @@ handle_button_internal(struct wio_server *server,
 		}
 	      Done:
 		wio_view_move(server->interactive.view, box.x, box.y);
-		wlr_xdg_toplevel_set_size(server->interactive.
-					  view->xdg_toplevel, box.width,
+		wlr_xdg_toplevel_set_size(server->interactive.view->
+					  xdg_toplevel, box.width,
 					  box.height);
 
 		view_end_interactive(server);
@@ -615,7 +613,7 @@ handle_button_internal(struct wio_server *server,
 		    wio_view_at(server, server->cursor->x,
 				server->cursor->y, &surface, &sx, &sy);
 		if(view){
-			wio_view_hide(view);
+			wio_scheme_hide_requested(view);
 		}
 		view_end_interactive(server);
 		break;

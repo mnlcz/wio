@@ -129,6 +129,24 @@ wio_scheme_menu_dispatch(int index)
 }
 
 static SCM
+wio_hide_requested_body(void *data)
+{
+	struct wio_view *view = (struct wio_view *) data;
+	SCM proc = scm_variable_ref(scm_c_lookup("wio-hide-requested"));
+	scm_call_1(proc, wio_wrap_view(view));
+
+	return SCM_BOOL_T;
+}
+
+void
+wio_scheme_hide_requested(struct wio_view *view)
+{
+	scm_c_catch(SCM_BOOL_T,
+		    wio_hide_requested_body, (void *) view,
+		    scm_handle_by_message_noexit, "wio", NULL, NULL);
+}
+
+static SCM
 wio_guile_repl_body(void *data)
 {
 	const char *repl_path = (const char *) data;
