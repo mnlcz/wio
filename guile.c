@@ -37,7 +37,20 @@ wio_views_list(void)
 }
 
 static SCM
-wio_view_title_scm(SCM view_scm)
+wio_hidden_views_list(void)
+{
+	SCM head = SCM_EOL;
+	struct wio_view *view;
+
+	wl_list_for_each_reverse(view, &the_server->hidden_views, link){
+		head = scm_cons(wio_wrap_view(view), head);
+	}
+
+	return head;
+}
+
+static SCM
+wio_view_properties_scm(SCM view_scm)
 {
 	scm_assert_foreign_object_type(wio_view_type, view_scm);
 	uint64_t id = (uint64_t) scm_foreign_object_ref(view_scm, 0);
@@ -47,10 +60,52 @@ wio_view_title_scm(SCM view_scm)
 		return SCM_BOOL_F;
 
 	const char *title = view->xdg_toplevel->title;
-	if(!title)
+	const char *app_id = view->xdg_toplevel->app_id;
+	SCM result = SCM_EOL;
+	
+	result = scm_acons(scm_from_locale_symbol("height"),
+			   scm_from_int(view->xdg_toplevel->current.height),
+			   result);
+	result = scm_acons(scm_from_locale_symbol("width"),
+			   scm_from_int(view->xdg_toplevel->current.width),
+			   result);
+	result = scm_acons(scm_from_locale_symbol("y"),
+			   scm_from_int(view->y), result);
+	result = scm_acons(scm_from_locale_symbol("x"),
+			   scm_from_int(view->x), result);
+	result = scm_acons(scm_from_locale_symbol("app-id"),
+			   app_id ? scm_from_locale_string(app_id) : SCM_BOOL_F,
+			   result);
+	result = scm_acons(scm_from_locale_symbol("title"),
+			   title ? scm_from_locale_string(title) : SCM_BOOL_F,
+			   result);
+
+	return result;
+}
+
+static SCM
+wio_set_view_geometry_scm(SCM view_scm, SCM x_scm, SCM y_scm,
+			  SCM width_scm, SCM height_scm)
+{
+	scm_assert_foreign_object_type(wio_view_type, view_scm);
+	uint64_t id = (uint64_t) scm_foreign_object_ref(view_scm, 0);
+	struct wio_view *view = wio_view_by_id(the_server, id);
+
+	if(!view)
 		return SCM_BOOL_F;
 
-	return scm_from_locale_string(title);
+	int x = scm_to_int(x_scm);
+	int y = scm_to_int(y_scm);
+	int width = scm_to_int(width_scm);
+	int height = scm_to_int(height_scm);
+
+	if(width < MINWIDTH || height < MINHEIGHT)
+		return SCM_BOOL_F;
+
+	wio_view_move(view, x, y);
+	wlr_xdg_toplevel_set_size(view->xdg_toplevel, width, height);
+
+	return SCM_BOOL_T;
 }
 
 static SCM
@@ -147,6 +202,25 @@ wio_scheme_hide_requested(struct wio_view *view)
 }
 
 static SCM
+wio_view_mapped_body(void *data)
+{
+	struct wio_view *view = (struct wio_view *) data;
+	SCM proc = scm_variable_ref(scm_c_lookup("wio-view-placement-requested"));
+	scm_call_1(proc, wio_wrap_view(view));
+
+	return SCM_BOOL_T;
+}
+
+void
+wio_scheme_view_mapped(struct wio_view *view)
+{
+	scm_c_catch(SCM_BOOL_T,
+		    wio_view_mapped_body, (void *) view,
+		    scm_handle_by_message_noexit, "wio",
+		    NULL, NULL);
+}
+
+static SCM
 wio_guile_repl_body(void *data)
 {
 	const char *repl_path = (const char *) data;
@@ -201,10 +275,12 @@ wio_guile_register_primitives(void)
 	scm_c_define_gsubr("wio-ping", 0, 0, 0, wio_ping);
 	scm_c_define_gsubr("wio-echo", 1, 0, 0, wio_echo);
 	scm_c_define_gsubr("wio-views", 0, 0, 0, wio_views_list);
-	scm_c_define_gsubr("wio-view-title", 1, 0, 0, wio_view_title_scm);
 	scm_c_define_gsubr("wio-hide-view", 1, 0, 0, wio_hide_view_scm);
 	scm_c_define_gsubr("wio-restore-view", 1, 0, 0,
 			   wio_restore_view_scm);
+	scm_c_define_gsubr("wio-view-properties", 1, 0, 0, wio_view_properties_scm);
+	scm_c_define_gsubr("wio-hidden-views", 0, 0, 0, wio_hidden_views_list);
+	scm_c_define_gsubr("wio-set-view-geometry", 5, 0, 0, wio_set_view_geometry_scm);
 }
 
 static SCM

@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/box.h>
 
+#include "guile.h"
 #include "xdg-shell-protocol.h"
 #include "server.h"
 #include "view.h"
@@ -40,6 +41,8 @@ xdg_toplevel_map(struct wl_listener *listener, void *data)
 		// Sends wl_surface_enter
 		wio_view_move(view, view->x, view->y);
 	}
+
+	wio_scheme_view_mapped(view);
 }
 
 static void
