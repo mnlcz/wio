@@ -24,6 +24,7 @@ struct wio_server;
 struct wio_view {
 	int x, y;
 	uint64_t id;
+	char *last_title;
 	enum wio_view_area area;
 	struct wlr_xdg_toplevel *xdg_toplevel;
 	struct wio_server *server;

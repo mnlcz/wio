@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <assert.h>
 #include <stdlib.h>
 #include <wayland-server.h>
@@ -8,6 +10,7 @@
 #include "guile.h"
 #include "xdg-shell-protocol.h"
 #include "server.h"
+#include "string.h"
 #include "view.h"
 
 // TODO: scale
@@ -49,6 +52,18 @@ static void
 xdg_toplevel_commit(struct wl_listener *listener, void *data)
 {
 	struct wio_view *view = wl_container_of(listener, view, commit);
+
+	const char *title = view->xdg_toplevel->title;
+	bool title_changed =
+	    (title == NULL) != (view->last_title == NULL) ||
+	    (title != NULL && view->last_title != NULL &&
+	     strcmp(title, view->last_title) != 0);
+	if(title_changed){
+		free(view->last_title);
+		view->last_title = title ? strdup(title) : NULL;
+		wio_scheme_view_title_changed(view);
+	}
+
 	if(!view->xdg_toplevel->base->initial_commit){
 		return;
 	}
@@ -86,6 +101,7 @@ xdg_toplevel_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&view->commit.link);
 	wl_list_remove(&view->destroy.link);
 	wl_list_remove(&view->link);
+	free(view->last_title);
 	free(view);
 }
 
@@ -346,11 +362,11 @@ wio_which_box(struct wio_server *server)
 		goto End;
 	}
 	x2 = server->interactive.sx +
-	    server->interactive.view->xdg_toplevel->base->surface->
-	    current.width;
+	    server->interactive.view->xdg_toplevel->base->surface->current.
+	    width;
 	y2 = server->interactive.sy +
-	    server->interactive.view->xdg_toplevel->base->surface->
-	    current.height;
+	    server->interactive.view->xdg_toplevel->base->surface->current.
+	    height;
 	switch (server->interactive.view->area){
 	case VIEW_AREA_BORDER_TOP_LEFT:
 		y1 = server->cursor->y;
